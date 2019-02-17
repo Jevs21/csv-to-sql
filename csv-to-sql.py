@@ -193,7 +193,7 @@ def testMain(args):
 		sql_headers = params['sql_headers'];
 
 	csv = importCSV(csv_filename);
-
+ 
 	indecies = getHeaderIndexFromCSV(csv, csv_headers);
 
 	if(len(indecies) == 0):
