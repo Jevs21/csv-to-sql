@@ -11,7 +11,8 @@
 # Optional Arguments:
 #   - [-o]  -> output file name
 #   - [-sh] -> sql headers. if headers from csv to sql arent consistant
-#              this use this list of headers for the sql output 
+#              this use this list of headers for the sql output
+#   - [-hi] -> header index (default 0)
 
 
 import sys, csv;
@@ -67,6 +68,8 @@ def parseArguments(args):
 			params['out_fn'] = args[i+1];
 		elif(args[i] == '-t'):
 			params['table'] = args[i+1];
+		elif(args[i] == '-hi'):
+			params['header_index'] = int(args[i+1]);
 		elif(args[i] == '-ch'):
 			j = 1;
 			csv_head_arr = [];
@@ -92,17 +95,22 @@ def parseArguments(args):
 	return params;
 
 # Match headers from arguments to headers from csv
-def getHeaderIndexFromCSV(csv, headers):
+def getHeaderIndexFromCSV(csv, headers, hi):
 	indecies = [];
 
 	for i in range(0, len(headers)):
 		indecies.append(-1);
 
-	for i in range(0, len(csv[0])):
-		if csv[0][i] in headers:
-			cur_header = csv[0][i];
+	for i in range(0, len(csv[hi])):
+		if csv[hi][i].lower() in headers:
+			cur_header = csv[hi][i].lower();
 			ind = headers.index(cur_header)
 			indecies[ind] = i;
+			print("CORRECT -> " + str(csv[hi][i].lower()) + ", ind="+str(ind)+", i=" + str(i));
+		else:
+			print("ERROR   -> " + str(csv[hi][i].lower()) + ", ind="+str(ind)+", i=" + str(i));
+
+	print(indecies);
 
 	return indecies;
 
@@ -113,6 +121,7 @@ def importCSV(fn):
 	    your_list = list(reader);
 
 	return your_list;
+
 
 # Create SQL
 def createSQL(csv, table, indecies, headers):
@@ -133,17 +142,38 @@ def createSQL(csv, table, indecies, headers):
 	for i in range(1, len(csv)):
 		cur_str += base_str;
 		for j in range(0, len(indecies)):
+			is_sal = False;
+
+			val_str = str(csv[i][indecies[j]]);
+
+			if '$' in val_str:
+				is_sal = True;
+				val_str = val_str.replace("$", "");
+				if ',' in val_str:
+					val_str = val_str.replace(",", "");
+			if '\'' in val_str:
+				val_str = val_str.replace("'", "\\'");
+				
 			if(j < len(indecies) - 1):
-				cur_str += "'"+ str(csv[i][indecies[j]]) + "', ";
+				if is_sal:
+					cur_str += val_str + ", ";
+				else:
+					cur_str += "'"+ val_str + "', ";
 			else:
-				cur_str += "'"+ str(csv[i][indecies[j]]) + "');";
+				if is_sal:
+					cur_str += val_str + ");";
+				else:
+					cur_str += "'"+ val_str + "');";
 		sql += str(cur_str) + '\n';
 		cur_str = "";
 
 	return sql;
 
-
 # Export SQL
+def exportSQL(fn, sql):
+	with open(fn, "w") as f:
+		f.write(sql);
+
 
 # Test argument print
 def testArgPrint(csv, sql, table, headers, sql_headers, ind):
@@ -177,12 +207,14 @@ def testMain(args):
 	
 	is_sql_headers = False;
 	is_out_file    = False;
+	is_header_index= False;
 
 	csv_filename = params['in_fn'];
 	table_name   = params['table'];
 	csv_headers  = params['csv_headers'];
 	sql_filename = "";
 	sql_headers  = [];
+	header_index = 0;
 
 
 	if 'out_fn' in params:
@@ -191,10 +223,13 @@ def testMain(args):
 	if 'sql_headers' in params:
 		is_sql_headers = True;
 		sql_headers = params['sql_headers'];
+	if 'header_index' in params:
+		is_header_index = True;
+		header_index = params['header_index'];
 
 	csv = importCSV(csv_filename);
  
-	indecies = getHeaderIndexFromCSV(csv, csv_headers);
+	indecies = getHeaderIndexFromCSV(csv, csv_headers, header_index);
 
 	if(len(indecies) == 0):
 		print("No column headers match csv headers");
@@ -207,13 +242,15 @@ def testMain(args):
 	else:
 		sql_content = createSQL(csv, table_name, indecies, csv_headers);
 
-	print(sql_content);
+
+	#print(sql_content.split(";")[0]);
+	#print("---");
+
+	if is_out_file:
+		exportSQL(sql_filename, sql_content);
 
 	testArgPrint(csv_filename, sql_filename, table_name, csv_headers, sql_headers, indecies);
 
-
-
-	
 
 
 
