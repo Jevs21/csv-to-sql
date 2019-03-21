@@ -102,13 +102,12 @@ def getHeaderIndexFromCSV(csv, headers, hi):
 		indecies.append(-1);
 
 	for i in range(0, len(csv[hi])):
-		if csv[hi][i].lower() in headers:
-			cur_header = csv[hi][i].lower();
-			ind = headers.index(cur_header)
-			indecies[ind] = i;
-			print("CORRECT -> " + str(csv[hi][i].lower()) + ", ind="+str(ind)+", i=" + str(i));
-		else:
-			print("ERROR   -> " + str(csv[hi][i].lower()) + ", ind="+str(ind)+", i=" + str(i));
+		cur_head = csv[hi][i].lower();
+		for j in range(0, len(headers)):
+			if(headers[j] in cur_head):
+				indecies[j] = i;		
+				
+		
 
 	print(indecies);
 
@@ -243,8 +242,9 @@ def testMain(args):
 		sql_content = createSQL(csv, table_name, indecies, csv_headers);
 
 
-	#print(sql_content.split(";")[0]);
-	#print("---");
+	print("----------------------------");
+	print(sql_content.split(";")[0]);
+	
 
 	if is_out_file:
 		exportSQL(sql_filename, sql_content);
